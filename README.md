@@ -32,5 +32,3 @@ REMEMBER
 this app is designed to also run in the background, so if you click the X to close window it will be minimized to the ash tray (small icon in bottom right corner)
 to fully close it or to show the app again, just right click the icon and press one of the two buttons. 
 
-Also, the api wont work with over 60 names, so try to keep it bellow that
-

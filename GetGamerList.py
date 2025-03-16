@@ -161,31 +161,47 @@ def play_notification():
 
 seen_streamers = set()
 
+linger_streamers = {}
+
 def track_changes(game_id, streamer_count):
-    global seen_streamers, minimized_at, first_run
+    global seen_streamers, minimized_at, first_run, linger_streamers
     stop_tracking.clear()
 
     while not stop_tracking.is_set():
         top_streams, _ = get_top_streams(game_id, streamer_count)
         current_streamers = set(name for name, _ in top_streams)
-        new_streamers = current_streamers - seen_streamers  
+        new_streamers = current_streamers - seen_streamers
+        dropped_streamers = seen_streamers - current_streamers
 
+
+        for streamer in dropped_streamers:
+            if streamer in linger_streamers:
+                if linger_streamers[streamer] <= 1:
+                    del linger_streamers[streamer]
+                else:
+                    linger_streamers[streamer] -= 1  
+            else:
+                linger_streamers[streamer] = 2
+
+
+        for streamer in list(linger_streamers.keys()):
+            if streamer in current_streamers:
+                del linger_streamers[streamer]
 
         if notify_var.get() and new_streamers:
             if not first_run:
-                if minimized_at == 0 or time.time() - minimized_at >= 30:  
+                if minimized_at == 0 or time.time() - minimized_at >= 30:
                     play_notification()
                     start_blinking_icon()
 
-        seen_streamers.update(new_streamers)  
+        seen_streamers = current_streamers | set(linger_streamers.keys()) 
 
+        root.after(0, result_list.delete, 0, tk.END)
         for name, link in top_streams:
-            if name not in stream_links:
-                root.after(0, lambda n=name: result_list.insert(tk.END, n))
-                stream_links[name] = link  
+            root.after(0, lambda n=name: result_list.insert(tk.END, n))
+            stream_links[name] = link  
 
         first_run = False
-
 
         for i in range(30, 0, -1):
             if stop_tracking.is_set():

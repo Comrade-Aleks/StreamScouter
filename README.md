@@ -10,10 +10,11 @@ Write name and then put in "http://localhost" into OAuth Redirect URLs
 
 category should be Application Intigration.
 and the type should be Confidential.
+also you might have to verify that you are not a robot, or smt like that. 
 
 Once Registerd, you should be seeing your client ID, this string of numbers and letters should go into the client ID part of the settings within the app
 
-On the same website, you will also see "New Secret" you will have to click this, also do the "im not a robot" thing and you will get another string of numbers and letters:
+On the same website, you will also see "New Secret" you will have to click this and you will get another string of numbers and letters:
 this string is called client secret and should go into its own part of the settings tab within the app.
 
 after filling both inputs (client ID and client secret) you can save and then click generate access token. 
@@ -32,5 +33,5 @@ REMEMBER
 this app is designed to also run in the background, so if you click the X to close window it will be minimized to the ash tray (small icon in bottom right corner)
 to fully close it or to show the app again, just right click the icon and press one of the two buttons. 
 
-Also, the api wont work with over 60 names, so try to keep it bellow that
+Also, the api has a maximum returns per request, so to make sure this is not exceeded i placed the cap at 100.
 

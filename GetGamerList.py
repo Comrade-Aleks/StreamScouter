@@ -122,13 +122,18 @@ def update_streamers():
 
     game_name = game_entry.get()
     streamer_count = int(count_entry.get())
+    
+    if streamer_count > 100:
+        streamer_count = 100
+        count_entry.delete(0, tk.END)
+        count_entry.insert(0, str(streamer_count))
+
     save_settings(game_name, streamer_count, root.winfo_width(), root.winfo_height())
 
     game_id = get_game_id(game_name)
     if not game_id:
         messagebox.showerror("Error", f"Could not find game '{game_name}' on Twitch.")
         return
-
 
     tracking_thread = threading.Thread(target=track_changes, args=(game_id, streamer_count), daemon=True)
     tracking_thread.start()

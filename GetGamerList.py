@@ -339,7 +339,6 @@ def on_close():
     """Minimize the app to the system tray instead of closing it."""
     global tray_icon, minimized_at
     root.withdraw()
-
     minimized_at = time.time()
 
     if tray_icon is None:
@@ -353,6 +352,7 @@ def on_close():
 
         tray_thread = threading.Thread(target=run_tray, daemon=True)
         tray_thread.start()
+        update_tray_icon(0, 120, 215)
 
 blinking = False
 blink_thread = None

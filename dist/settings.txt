@@ -1,5 +1,5 @@
 Minecraft
-100
+10
 200
 357
 True

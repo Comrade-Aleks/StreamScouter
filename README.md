@@ -1,4 +1,4 @@
-# Game Streamer Tracker
+# StreamScouter
 This is an app that tracks the top whatever number of streamers for any game you want.
 it has the function to notify you if a new streamer comes up. 
 

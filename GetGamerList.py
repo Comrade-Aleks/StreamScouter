@@ -178,7 +178,6 @@ def track_changes(game_id, streamer_count):
         new_streamers = current_streamers - seen_streamers
         dropped_streamers = seen_streamers - current_streamers
 
-
         for streamer in dropped_streamers:
             if streamer in linger_streamers:
                 if linger_streamers[streamer] <= 1:
@@ -188,7 +187,6 @@ def track_changes(game_id, streamer_count):
             else:
                 linger_streamers[streamer] = 2
 
-
         for streamer in list(linger_streamers.keys()):
             if streamer in current_streamers:
                 del linger_streamers[streamer]
@@ -197,7 +195,8 @@ def track_changes(game_id, streamer_count):
             if not first_run:
                 if minimized_at == 0 or time.time() - minimized_at >= 30:
                     play_notification()
-                    start_blinking_icon()
+                    if root.state() == 'withdrawn':
+                        start_blinking_icon()
 
         seen_streamers = current_streamers | set(linger_streamers.keys()) 
 

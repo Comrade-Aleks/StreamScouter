@@ -2,7 +2,7 @@ import requests
 import tkinter as tk
 from tkinter import messagebox
 
-Version = "v1.0.0"
+Version = "v1.0.1"
 REPO_OWNER = "Comrade-Aleks"
 REPO_NAME = "StreamScouter"
 

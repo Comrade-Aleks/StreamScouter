@@ -211,9 +211,16 @@ def track_changes(game_id, streamer_count):
         for i in range(30, 0, -1):
             if stop_tracking.is_set():
                 return
+
+            if i < 2:
+                root.after(0, lambda: track_button.config(state=tk.DISABLED))
+            else:
+                root.after(0, lambda: track_button.config(state=tk.NORMAL))
+
             root.after(0, lambda t=i: timer_label.config(text=f"Next refresh in: {t}s"))
             time.sleep(1)
 
+    root.after(0, lambda: track_button.config(state=tk.NORMAL))
     root.after(0, lambda: timer_label.config(text="Tracking Stopped"))
 
 tray_icon = None
@@ -244,7 +251,8 @@ count_entry = tk.Entry(main_tab)
 count_entry.insert(0, str(default_count))
 count_entry.pack(fill=tk.X, padx=10)
 
-tk.Button(main_tab, text="Track Streamers", command=update_streamers).pack()
+track_button = tk.Button(main_tab, text="Track Streamers", command=update_streamers)
+track_button.pack()
 
 timer_label = tk.Label(main_tab, text="Next refresh in: 30s", anchor="e")
 timer_label.pack(fill=tk.X, padx=10, pady=5)

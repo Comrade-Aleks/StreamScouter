@@ -112,24 +112,24 @@ def track_changes(game_name, streamer_count):
             return
 
         top_streams = tracker.track_changes(game_id, streamer_count)
-        current_streamers = set(name for name, _ in top_streams)
-        new_streamers = current_streamers - seen_streamers
-        dropped_streamers = seen_streamers - current_streamers
+        current_streamer_ids = set(stream["id"] for stream in top_streams)
+        new_streamer_ids = current_streamer_ids - seen_streamers
+        dropped_streamer_ids = seen_streamers - current_streamer_ids
 
-        for streamer in dropped_streamers:
-            if streamer in linger_streamers:
-                if linger_streamers[streamer] <= 1:
-                    del linger_streamers[streamer]
+        for streamer_id in dropped_streamer_ids:
+            if streamer_id in linger_streamers:
+                if linger_streamers[streamer_id] <= 1:
+                    del linger_streamers[streamer_id]
                 else:
-                    linger_streamers[streamer] -= 1
+                    linger_streamers[streamer_id] -= 1
             else:
-                linger_streamers[streamer] = 2
+                linger_streamers[streamer_id] = 2
 
-        for streamer in list(linger_streamers.keys()):
-            if streamer in current_streamers:
-                del linger_streamers[streamer]
+        for streamer_id in list(linger_streamers.keys()):
+            if streamer_id in current_streamer_ids:
+                del linger_streamers[streamer_id]
 
-        if new_streamers:
+        if new_streamer_ids:
             if not first_run:
                 if minimized_at == 0 or time.time() - minimized_at >= 30:
                     if notify_var.get():
@@ -137,19 +137,24 @@ def track_changes(game_name, streamer_count):
                     if root.state() == 'withdrawn':
                         tray_icon_manager.start_blinking_icon()
 
-        seen_streamers = current_streamers | set(linger_streamers.keys())
+        seen_streamers = current_streamer_ids | set(linger_streamers.keys())
 
         if root.state() != 'withdrawn':
-            root.after(0, layout.result_list.delete, 0, tk.END)
-            for name, link in top_streams:
-                root.after(0, lambda n=name: layout.result_list.insert(tk.END, n))
-                stream_links[name] = link
+            root.after(0, lambda: clear_canvas(layout.canvas_frame))
+            for stream in top_streams:
+                root.after(
+                    0,
+                    lambda s=stream: layout.add_item_to_canvas(
+                        s["name"], s["link"], s["profile_picture"]
+                    ),
+                )
+                stream_links[stream["id"]] = stream["link"]
 
         first_run = False
 
         for i in range(30, 0, -1):
             if stop_tracking.is_set():
-                                return
+                return
 
             if i < 2:
                 root.after(0, lambda: layout.track_button.config(state=tk.DISABLED))
@@ -166,6 +171,10 @@ def track_changes(game_name, streamer_count):
             if i == 30:
                 root.after(0, lambda: layout.track_button.config(state=tk.NORMAL))
 
+def clear_canvas(canvas_frame):
+    """Clear all items from the canvas."""
+    for widget in canvas_frame.winfo_children():
+        widget.destroy()
 
 def update_streamers():
     global tracking_thread, stop_tracking, is_updating

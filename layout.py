@@ -2,6 +2,10 @@ import tkinter as tk
 from tkinter import ttk
 import sys
 import os
+import webbrowser
+from PIL import Image, ImageTk
+import requests
+from io import BytesIO
 
 class Layout:
     def __init__(self, root, config, callbacks):
@@ -53,9 +57,30 @@ class Layout:
         frame = tk.Frame(self.main_tab)
         frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
-        # Create the Listbox
-        self.result_list = tk.Listbox(frame, width=50, height=20)
-        self.result_list.grid(row=0, column=0, sticky="nsew")
+        # Frame to hold canvas (this will have the border)
+        canvas_container = tk.Frame(frame, bg="#815ac0", highlightthickness=1, highlightbackground="#815ac0")
+        canvas_container.grid(row=0, column=0, sticky="nsew")
+
+        # Create the Canvas inside the bordered container
+        self.result_canvas = tk.Canvas(
+            canvas_container,
+            bg="#2e2e2e",
+            highlightthickness=0
+        )
+        self.result_canvas.pack(fill=tk.BOTH, expand=True)
+
+        # Frame inside the Canvas
+        self.canvas_frame = tk.Frame(self.result_canvas, bg="#2e2e2e", padx=5, pady=5)
+        self.canvas_window = self.result_canvas.create_window((0, 0), window=self.canvas_frame, anchor="nw")
+
+        # add scrolling functionality
+        self.canvas_frame.bind(
+            "<Configure>",
+            lambda e: self.result_canvas.configure(scrollregion=self.result_canvas.bbox("all"))
+        )
+        
+        # Add the Frame to the Canvas
+        self.canvas_window = self.result_canvas.create_window((0, 0), window=self.canvas_frame, anchor="nw")
 
         # Create a vertical scrollbar
         style = ttk.Style()
@@ -69,11 +94,11 @@ class Layout:
         style.map("#815ac0.Vertical.TScrollbar",
                   background=[("disabled", "#815ac0")])
 
-        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=self.result_list.yview, style="#815ac0.Vertical.TScrollbar")
+        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=self.result_canvas.yview, style="#815ac0.Vertical.TScrollbar")
         scrollbar.grid(row=0, column=1, sticky="ns")
 
-        # Sets the scrollbar to the listbox
-        self.result_list.configure(yscrollcommand=scrollbar.set)
+        # Configure the Canvas to use the scrollbar
+        self.result_canvas.configure(yscrollcommand=scrollbar.set)
 
         frame.grid_rowconfigure(0, weight=1)
         frame.grid_columnconfigure(0, weight=1)
@@ -164,18 +189,6 @@ class Layout:
             elif isinstance(widget, tk.Frame):
                 widget.configure(bg=dark_bg)
 
-        # Listbox
-        self.result_list.configure(
-            bg=dark_bg, 
-            fg=dark_fg, 
-            selectbackground=accent_color, 
-            selectforeground=dark_bg,
-            highlightbackground=border_color,
-            highlightcolor=border_color
-        )
-
-        style.configure("Dark.TFrame", background=dark_bg)
-
         # Checkbutton styling
         style.configure("Dark.TCheckbutton", background=dark_bg, foreground=dark_fg)
         style.map("Dark.TCheckbutton", background=[("active", dark_bg)], foreground=[("active", dark_fg)])
@@ -196,3 +209,42 @@ class Layout:
             activebackground=dark_fg, 
             activeforeground=dark_bg
         ).pack(pady=5)
+
+    def add_item_to_canvas(self, text, link=None, image_url=None):
+        """Add an item (text and optional image) to the canvas."""
+        item_frame = tk.Frame(self.canvas_frame, bg="#2e2e2e")
+        item_frame.pack(fill=tk.X)
+
+        if image_url:
+            try:
+                response = requests.get(image_url, timeout=5)
+                response.raise_for_status()
+                img_data = BytesIO(response.content)
+                img = Image.open(img_data).resize((30, 30))
+                tk_img = ImageTk.PhotoImage(img)
+
+                img_label = tk.Label(
+                    item_frame, 
+                    image=tk_img, 
+                    bg="#2e2e2e",
+                    cursor="hand2" if link else "arrow"
+                )
+                img_label.image = tk_img
+                img_label.pack(side=tk.LEFT)
+            except Exception as e:
+                print(f"Error loading image: {e}")
+
+        text_label = tk.Label(
+            item_frame,
+            text=text,
+            bg="#2e2e2e",
+            fg="#ffffff",
+            anchor="w",
+            cursor="hand2" if link else "arrow"
+        )
+        text_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        if link:
+            text_label.bind("<Button-1>", lambda e: webbrowser.open(link))
+            if image_url:
+                img_label.bind("<Button-1>", lambda e: webbrowser.open(link))

@@ -1,7 +1,7 @@
 minecraft
 20
-223
-629
+325
+479
 True
 C:/Users/Aleksander/Documents/GitHub/StreamScouter/dist/default.wav
 0.5

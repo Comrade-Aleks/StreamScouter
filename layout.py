@@ -6,6 +6,7 @@ import webbrowser
 from PIL import Image, ImageTk
 import requests
 from io import BytesIO
+import threading
 
 class Layout:
     def __init__(self, root, config, callbacks):
@@ -211,11 +212,12 @@ class Layout:
         ).pack(pady=5)
 
     def add_item_to_canvas(self, text, link=None, image_url=None):
-        """Add an item (text and optional image) to the canvas."""
+        """Add an item (text and optional image) to the canvas with asynchronous image loading."""
         item_frame = tk.Frame(self.canvas_frame, bg="#2e2e2e")
         item_frame.pack(fill=tk.X)
 
-        if image_url:
+        def load_image():
+            """Load the image asynchronously."""
             try:
                 response = requests.get(image_url, timeout=5)
                 response.raise_for_status()
@@ -223,28 +225,48 @@ class Layout:
                 img = Image.open(img_data).resize((30, 30))
                 tk_img = ImageTk.PhotoImage(img)
 
-                img_label = tk.Label(
-                    item_frame, 
-                    image=tk_img, 
-                    bg="#2e2e2e",
-                    cursor="hand2" if link else "arrow"
-                )
-                img_label.image = tk_img
-                img_label.pack(side=tk.LEFT)
+                def update_ui():
+                    img_label = tk.Label(
+                        item_frame,
+                        image=tk_img,
+                        bg="#2e2e2e",
+                        cursor="hand2" if link else "arrow"
+                    )
+                    img_label.image = tk_img
+                    img_label.pack(side=tk.LEFT)
+
+                    if link:
+                        img_label.bind("<Button-1>", lambda e: webbrowser.open(link))
+
+                    text_label = tk.Label(
+                        item_frame,
+                        text=text,
+                        bg="#2e2e2e",
+                        fg="#ffffff",
+                        anchor="w",
+                        cursor="hand2" if link else "arrow"
+                    )
+                    text_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+                    if link:
+                        text_label.bind("<Button-1>", lambda e: webbrowser.open(link))
+
+                self.root.after(0, update_ui)
             except Exception as e:
                 print(f"Error loading image: {e}")
 
-        text_label = tk.Label(
-            item_frame,
-            text=text,
-            bg="#2e2e2e",
-            fg="#ffffff",
-            anchor="w",
-            cursor="hand2" if link else "arrow"
-        )
-        text_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        if image_url:
+            threading.Thread(target=load_image, daemon=True).start()
+        else:
+            text_label = tk.Label(
+                item_frame,
+                text=text,
+                bg="#2e2e2e",
+                fg="#ffffff",
+                anchor="w",
+                cursor="hand2" if link else "arrow"
+            )
+            text_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
-        if link:
-            text_label.bind("<Button-1>", lambda e: webbrowser.open(link))
-            if image_url:
-                img_label.bind("<Button-1>", lambda e: webbrowser.open(link))
+            if link:
+                text_label.bind("<Button-1>", lambda e: webbrowser.open(link))

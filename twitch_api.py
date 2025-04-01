@@ -18,8 +18,13 @@ class TwitchAPI:
         headers = {"Client-ID": self.client_id, "Authorization": f"Bearer {self.access_token}"}
         response = requests.get(url, headers=headers, params={"game_id": game_id, "first": limit})
         data = response.json()
+        
         return [
-            {"id": stream["user_id"], "name": stream["user_name"], "link": f"https://twitch.tv/{stream['user_name']}"}
+            {
+                "id": stream["user_id"],
+                "name": stream["user_name"],
+                "link": f"https://twitch.tv/{stream.get('user_login', stream['user_name'])}"
+            }
             for stream in data.get("data", [])
         ]
 
@@ -65,12 +70,7 @@ class TwitchAPI:
             except requests.RequestException as e:
                 print(f"Request failed: {e}")
                 time.sleep(1)
-
             time.sleep(0.5)
-
-        with open(output_file, "w") as file:
-            for user_id, profile_picture in profile_pictures.items():
-                file.write(f"{user_id}: {profile_picture}\n")
 
         return profile_pictures
 

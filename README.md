@@ -42,5 +42,4 @@ Future updates will include:
 - Red text for new streamers, maybe for one refresh, then another color the next refresh and then normal after again.
 - The ability to remember and remind about specific streamers you wish to track.
 - more settings, maybe the ability to remove profile pictures. 
-- need to fix non latin usernames link break bug
 

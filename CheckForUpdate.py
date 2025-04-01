@@ -4,7 +4,7 @@ from tkinter import messagebox
 import os
 import threading
 
-Version = "v2.5.1"
+Version = "v2.5.2"
 REPO_OWNER = "Comrade-Aleks"
 REPO_NAME = "StreamScouter"
 MUTE_FILE = "mute_update_notifications.txt"

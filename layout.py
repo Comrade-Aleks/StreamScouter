@@ -212,7 +212,7 @@ class Layout:
         ).pack(pady=5)
 
     def add_item_to_canvas(self, text, link=None, image_url=None):
-        """Add an item (text and optional image) to the canvas with asynchronous image loading."""
+        """Add an item (text and optional image) to the canvas"""
         item_frame = tk.Frame(self.canvas_frame, bg="#2e2e2e")
         item_frame.pack(fill=tk.X)
 

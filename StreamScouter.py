@@ -102,74 +102,57 @@ def update_volume(value):
     print(f"Volume updated to: {value}")
 
 def track_changes(game_name, streamer_count):
-    global seen_streamers, minimized_at, first_run, linger_streamers
+    global seen_streamers, minimized_at, first_run
     stop_tracking.clear()
 
     while not stop_tracking.is_set():
         game_id = twitch_api.get_game_id(game_name)
         if not game_id:
-            root.after(0, lambda: messagebox.showerror("Error", f"Game '{game_name}' not found on Twitch."))
+            show_error(f"Game '{game_name}' not found on Twitch.")
+            return
+        
+        top_streams = tracker.get_top_streams(game_id, streamer_count)
+        streamer_data = tracker.process_streamers(top_streams)
+
+        handle_new_streamers(streamer_data)
+        update_ui(streamer_data)
+        first_run = False
+        countdown_timer()
+
+def show_error(message):
+    root.after(0, lambda: messagebox.showerror("Error", message))
+
+def handle_new_streamers(streamer_data):
+    global seen_streamers, minimized_at, first_run
+    current_ids = {stream["id"] for stream in streamer_data}
+    new_streamer_ids = current_ids - seen_streamers
+
+    if new_streamer_ids and not first_run:
+        if minimized_at == 0 or time.time() - minimized_at >= 30:
+            if notify_var.get():
+                notification_manager.play_notification()
+            if root.state() == 'withdrawn':
+                tray_icon_manager.start_blinking_icon()
+    
+    seen_streamers = current_ids | set(tracker.linger_streamers.keys())
+
+def update_ui(streamer_data):
+    if root.state() != 'withdrawn':
+        root.after(0, lambda: clear_canvas(layout.canvas_frame))
+        for stream in streamer_data:
+            root.after(0, lambda s=stream: layout.add_item_to_canvas(s["name"], s["link"], s["profile_picture"]))
+            stream_links[stream["id"]] = stream["link"]
+
+def countdown_timer():
+    for i in range(30, 0, -1):
+        if stop_tracking.is_set():
             return
 
-        top_streams = tracker.track_changes(game_id, streamer_count)
-        current_streamer_ids = set(stream["id"] for stream in top_streams)
-        new_streamer_ids = current_streamer_ids - seen_streamers
-        dropped_streamer_ids = seen_streamers - current_streamer_ids
+        root.after(0, lambda t=i: layout.timer_label.config(text=f"Next refresh in: {t}s"))
+        time.sleep(1)
 
-        for streamer_id in dropped_streamer_ids:
-            if streamer_id in linger_streamers:
-                if linger_streamers[streamer_id] <= 1:
-                    del linger_streamers[streamer_id]
-                else:
-                    linger_streamers[streamer_id] -= 1
-            else:
-                linger_streamers[streamer_id] = 2
+    root.after(0, lambda: layout.timer_label.config(text="Refreshing streams..."))
 
-        for streamer_id in list(linger_streamers.keys()):
-            if streamer_id in current_streamer_ids:
-                del linger_streamers[streamer_id]
-
-        if new_streamer_ids:
-            if not first_run:
-                if minimized_at == 0 or time.time() - minimized_at >= 30:
-                    if notify_var.get():
-                        notification_manager.play_notification()
-                    if root.state() == 'withdrawn':
-                        tray_icon_manager.start_blinking_icon()
-
-        seen_streamers = current_streamer_ids | set(linger_streamers.keys())
-
-        if root.state() != 'withdrawn':
-            root.after(0, lambda: clear_canvas(layout.canvas_frame))
-            for stream in top_streams:
-                root.after(
-                    0,
-                    lambda s=stream: layout.add_item_to_canvas(
-                        s["name"], s["link"], s["profile_picture"]
-                    ),
-                )
-                stream_links[stream["id"]] = stream["link"]
-
-        first_run = False
-
-        for i in range(30, 0, -1):
-            if stop_tracking.is_set():
-                return
-
-            if i < 2:
-                root.after(0, lambda: layout.track_button.config(state=tk.DISABLED))
-            else:
-                root.after(0, lambda: layout.track_button.config(state=tk.NORMAL))
-
-            if root.state() != 'withdrawn':
-                root.after(0, lambda t=i: layout.timer_label.config(text=f"Next refresh in: {t}s"))
-
-            time.sleep(1)
-
-        if root.state() != 'withdrawn':
-            root.after(0, lambda: layout.timer_label.config(text="Refreshing streams..."))
-            if i == 30:
-                root.after(0, lambda: layout.track_button.config(state=tk.NORMAL))
 
 def clear_canvas(canvas_frame):
     """Clear all items from the canvas."""

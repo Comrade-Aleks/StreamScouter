@@ -1,6 +1,6 @@
 Minecraft
 100
-270
+280
 603
 True
 C:/Users/Aleksander/Documents/GitHub/StreamScouter/dist/default.wav

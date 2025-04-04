@@ -13,12 +13,21 @@ import time
 import os
 import winreg
 import sys
+import logging
+
+
 
 os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
 root = tk.Tk()
 
 CheckForUpdate.check_for_update_after_startup()
+
+logging.basicConfig(
+    filename="StreamScouter.log",
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 load_dotenv()
 
@@ -228,6 +237,24 @@ def toggle_launch_at_startup():
             with winreg.CreateKey(winreg.HKEY_CURRENT_USER, startup_key) as key:
                 winreg.SetValueEx(key, app_name, 0, winreg.REG_SZ, app_path)
 
+def start_tracking_on_launch():
+    global tracking_thread
+    logging.debug("start_tracking_on_launch called")
+    if tracking_thread and tracking_thread.is_alive():
+        logging.debug("Tracking thread already running.")
+        return
+    if not default_game:
+        logging.error("Default game is not set. Cannot start tracking.")
+        return
+    try:
+        logging.debug(f"Starting tracking thread for game: {default_game}, count: {default_count}")
+        tracking_thread = threading.Thread(
+            target=track_changes, args=(default_game, default_count), daemon=True
+        )
+        tracking_thread.start()
+    except Exception as e:
+        logging.error(f"Error starting tracking thread: {e}")
+
 layout = Layout(
     root,
     config={
@@ -253,15 +280,7 @@ layout = Layout(
     }
 )
 
-if default_launch_at_startup and default_game:
-    def start_tracking_on_launch():
-        global tracking_thread
-        tracking_thread = threading.Thread(
-            target=track_changes, args=(default_game, default_count), daemon=True
-        )
-        tracking_thread.start()
-
-    root.after(0, start_tracking_on_launch)
+root.after(0, start_tracking_on_launch)
 
 root.protocol("WM_DELETE_WINDOW", on_close)
 root.mainloop()

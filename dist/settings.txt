@@ -1,8 +1,8 @@
 Minecraft
-3
+10
 300
 498
 True
 default.wav
 0.5
-True
+False

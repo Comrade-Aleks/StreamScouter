@@ -129,6 +129,18 @@ class Layout:
         )
         self.volume_slider.pack()
 
+        # Add "Launch at Startup" checkbox
+        self.launch_at_startup_var = tk.BooleanVar(value=self.config.get('launch_at_startup', False))
+        self.launch_at_startup_checkbox = tk.Checkbutton(
+            self.settings_tab,
+            text="Launch at Startup",
+            variable=self.launch_at_startup_var,
+            command=self.callbacks['toggle_launch_at_startup'],
+            bg="#2e2e2e", fg="#ffffff", selectcolor="#815ac0",
+            activebackground="#2e2e2e", activeforeground="#ffffff"
+        )
+        self.launch_at_startup_checkbox.pack(pady=5)
+
         # dark mode!!!!
         self.enable_dark_mode()
 

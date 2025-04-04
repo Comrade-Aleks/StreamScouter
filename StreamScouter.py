@@ -10,6 +10,11 @@ from settings_manager import SettingsManager
 from tray_icon_manager import TrayIconManager
 import threading
 import time
+import os
+import winreg
+import sys
+
+os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
 root = tk.Tk()
 
@@ -21,7 +26,7 @@ SETTINGS_FILE = "settings.txt"
 ENV_FILE = ".env"
 
 settings_manager = SettingsManager(SETTINGS_FILE, ENV_FILE)
-default_game, default_count, default_width, default_height, default_notify, default_sound, default_volume = settings_manager.load_settings()
+default_game, default_count, default_width, default_height, default_notify, default_sound, default_volume, default_launch_at_startup = settings_manager.load_settings()
 
 notify_var = tk.BooleanVar(value=default_notify)
 sound_file = tk.StringVar(value=default_sound)
@@ -44,7 +49,7 @@ tracking_thread = None
 is_updating = False
 
 def save_settings(game_name, streamer_count, width, height):
-    settings_manager.save_settings(game_name, streamer_count, width, height, notify_var, sound_file, volume_var)
+    settings_manager.save_settings(game_name, streamer_count, width, height, notify_var, sound_file, volume_var, layout.launch_at_startup_var.get())
 
 def generate_access_token():
     client_id = layout.client_id_entry.get()
@@ -72,8 +77,9 @@ def save_client_info():
 def quit_app():
     save_settings(layout.game_entry.get(), layout.count_entry.get(), root.winfo_width(), root.winfo_height())
     if tray_icon_manager.tray_icon:
-        tray_icon_manager.tray_icon.stop()
+        tray_icon_manager.stop_tray_icon()
     root.destroy()
+    sys.exit()
 
 def on_close():
     root.withdraw()
@@ -205,11 +211,22 @@ def set_is_updating(value):
     global is_updating
     is_updating = value
 
-if default_game:
-    tracking_thread = threading.Thread(
-        target=track_changes, args=(default_game, default_count), daemon=True
-    )
-    tracking_thread.start()
+def toggle_launch_at_startup():
+    """Enable or disable launching the app at startup."""
+    app_name = "StreamScouter"
+    app_path = os.path.abspath(sys.argv[0])
+    startup_key = r"Software\Microsoft\Windows\CurrentVersion\Run"
+
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, startup_key, 0, winreg.KEY_ALL_ACCESS) as key:
+            if layout.launch_at_startup_var.get():
+                winreg.SetValueEx(key, app_name, 0, winreg.REG_SZ, app_path)
+            else:
+                winreg.DeleteValue(key, app_name)
+    except FileNotFoundError:
+        if layout.launch_at_startup_var.get():
+            with winreg.CreateKey(winreg.HKEY_CURRENT_USER, startup_key) as key:
+                winreg.SetValueEx(key, app_name, 0, winreg.REG_SZ, app_path)
 
 layout = Layout(
     root,
@@ -223,6 +240,7 @@ layout = Layout(
         "ACCESS_TOKEN": settings_manager.load_env_variable("YOUR_ACCESS_TOKEN"), 
         "volume_var": volume_var,
         "notify_var": notify_var,
+        "launch_at_startup": default_launch_at_startup,
     },
     callbacks={
         "update_streamers": update_streamers,
@@ -231,7 +249,19 @@ layout = Layout(
         "toggle_notifications": toggle_notifications,
         "select_sound_file": select_sound_file,
         "update_volume": update_volume,
+        "toggle_launch_at_startup": toggle_launch_at_startup,
     }
 )
+
+if default_launch_at_startup and default_game:
+    def start_tracking_on_launch():
+        global tracking_thread
+        tracking_thread = threading.Thread(
+            target=track_changes, args=(default_game, default_count), daemon=True
+        )
+        tracking_thread.start()
+
+    root.after(0, start_tracking_on_launch)
+
 root.protocol("WM_DELETE_WINDOW", on_close)
 root.mainloop()

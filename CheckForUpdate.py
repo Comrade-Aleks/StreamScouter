@@ -14,7 +14,8 @@ def get_all_releases():
     url = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases"
     response = requests.get(url)
     if response.status_code == 200:
-        return response.json()
+        releases = response.json()
+        return releases
     else:
         return []
 
@@ -55,15 +56,15 @@ def clean_mute_file(current_version):
 
 def compare_versions(current, latest):
     """Compare version numbers and determine if it's a major or minor update."""
-    current_parts = list(map(int, current.lstrip("v").split(".")))
-    latest_parts = list(map(int, latest.lstrip("v").split(".")))
+    current_parts = list(map(int, current.lstrip("v").strip().split(".")))
+    latest_parts = list(map(int, latest.lstrip("v").strip().split(".")))
 
-    if latest_parts[0] > current_parts[0]:
-        return "major"
-    elif latest_parts[1] > current_parts[1]:
-        return "minor"
-    elif latest_parts[2] > current_parts[2]:
-        return "minor"
+    for current_part, latest_part in zip(current_parts, latest_parts):
+        if latest_part > current_part:
+            return "major" if current_parts.index(current_part) == 0 else "minor"
+        elif latest_part < current_part:
+            return "none"
+
     return "none"
 
 def show_update_popup():
@@ -85,7 +86,7 @@ def show_update_popup():
     updates_to_notify = []
     current_parts = list(map(int, Version.lstrip("v").split(".")))
     for release in releases:
-        version = release["tag_name"]
+        version = release["tag_name"].strip()
         version_parts = list(map(int, version.lstrip("v").split(".")))
         if version_parts > current_parts and version not in muted_versions:
             updates_to_notify.append((version, release.get("body", "No changelog available.")))

@@ -224,12 +224,10 @@ class Layout:
         ).pack(pady=5)
 
     def add_item_to_canvas(self, text, link=None, image_url=None):
-        """Add an item (text and optional image) to the canvas"""
         item_frame = tk.Frame(self.canvas_frame, bg="#2e2e2e")
         item_frame.pack(fill=tk.X)
 
         def load_image():
-            """Load the image asynchronously."""
             try:
                 response = requests.get(image_url, timeout=5)
                 response.raise_for_status()
@@ -238,26 +236,14 @@ class Layout:
                 tk_img = ImageTk.PhotoImage(img)
 
                 def update_ui():
-                    img_label = tk.Label(
-                        item_frame,
-                        image=tk_img,
-                        bg="#2e2e2e",
-                        cursor="hand2" if link else "arrow"
-                    )
+                    img_label = tk.Label(item_frame, image=tk_img, bg="#2e2e2e", cursor="hand2" if link else "arrow")
                     img_label.image = tk_img
                     img_label.pack(side=tk.LEFT)
 
                     if link:
                         img_label.bind("<Button-1>", lambda e: webbrowser.open(link))
 
-                    text_label = tk.Label(
-                        item_frame,
-                        text=text,
-                        bg="#2e2e2e",
-                        fg="#ffffff",
-                        anchor="w",
-                        cursor="hand2" if link else "arrow"
-                    )
+                    text_label = tk.Label(item_frame, text=text, bg="#2e2e2e", fg="#ffffff", anchor="w", cursor="hand2" if link else "arrow")
                     text_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
                     if link:
@@ -265,20 +251,16 @@ class Layout:
 
                 self.root.after(0, update_ui)
             except Exception as e:
-                print(f"Error loading image: {e}")
+                self.root.after(0, lambda: self.add_text_only_item(item_frame, text, link))
 
         if image_url:
             threading.Thread(target=load_image, daemon=True).start()
         else:
-            text_label = tk.Label(
-                item_frame,
-                text=text,
-                bg="#2e2e2e",
-                fg="#ffffff",
-                anchor="w",
-                cursor="hand2" if link else "arrow"
-            )
-            text_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+            self.add_text_only_item(item_frame, text, link)
 
-            if link:
-                text_label.bind("<Button-1>", lambda e: webbrowser.open(link))
+    def add_text_only_item(self, item_frame, text, link):
+        text_label = tk.Label(item_frame, text=text, bg="#2e2e2e", fg="#ffffff", anchor="w", cursor="hand2" if link else "arrow")
+        text_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        if link:
+            text_label.bind("<Button-1>", lambda e: webbrowser.open(link))

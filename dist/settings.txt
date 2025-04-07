@@ -1,5 +1,5 @@
-Minecraft
-10
+barony
+3
 300
 498
 True

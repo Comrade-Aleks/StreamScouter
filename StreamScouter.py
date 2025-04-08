@@ -127,6 +127,7 @@ def track_changes(game_name, streamer_count):
             return
         
         top_streams = tracker.get_top_streams(game_id, streamer_count)
+        layout.total_streamers_count = len(top_streams)
         streamer_data = tracker.process_streamers(top_streams)
 
         handle_new_streamers(streamer_data)
@@ -157,6 +158,12 @@ def update_ui(streamer_data):
         for stream in streamer_data:
             root.after(0, lambda s=stream: layout.add_item_to_canvas(s["name"], s["link"], s["profile_picture"]))
             stream_links[stream["id"]] = stream["link"]
+
+        shown_count = len(streamer_data)
+        total_count = layout.total_streamers_count
+        root.after(0, lambda: layout.streamer_count_label.config(
+            text=f"{shown_count}/{total_count} streamers shown"
+        ))
 
 def countdown_timer():
     for i in range(30, 0, -1):

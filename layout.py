@@ -13,6 +13,7 @@ class Layout:
         self.root = root
         self.config = config
         self.callbacks = callbacks
+        self.total_streamers_count = 0
         self.initialize_layout()
 
     def initialize_layout(self):
@@ -52,13 +53,25 @@ class Layout:
 
         tk.Button(self.main_tab, text="Stop Tracking", command=self.callbacks['stop_tracking']).pack()
 
-        self.timer_label = tk.Label(self.main_tab, text="Next refresh in: 30s", anchor="e")
-        self.timer_label.pack(fill=tk.X, padx=10, pady=5)
+        info_frame = tk.Frame(self.main_tab, bg="#2e2e2e")
+        info_frame.pack(fill=tk.X, padx=10, pady=5)
+
+        # streamer count label for debugging mostly
+        self.streamer_count_label = tk.Label(
+            info_frame, text="0/0 streamers shown", anchor="w", bg="#2e2e2e", fg="#ffffff"
+        )
+        self.streamer_count_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        #refresh timer label
+        self.timer_label = tk.Label(
+            info_frame, text="Next refresh in: 30s", anchor="e", bg="#2e2e2e", fg="#ffffff"
+        )
+        self.timer_label.pack(side=tk.RIGHT, fill=tk.X, expand=True)
 
         frame = tk.Frame(self.main_tab)
         frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
-        # Frame to hold canvas (this will have the border)
+        # Frame to hold canvas
         canvas_container = tk.Frame(frame, bg="#815ac0", highlightthickness=1, highlightbackground="#815ac0")
         canvas_container.grid(row=0, column=0, sticky="nsew")
 

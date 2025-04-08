@@ -20,12 +20,13 @@ class StreamerTracker:
 
     def update_linger_streamers(self, dropped_streamers, current_streamers):
         for streamer_id in dropped_streamers:
-            if streamer_id in self.linger_streamers:
-                self.linger_streamers[streamer_id] -= 1
-                if self.linger_streamers[streamer_id] <= 0:
-                    del self.linger_streamers[streamer_id]
-            else:
-                self.linger_streamers[streamer_id] = 2
+            if streamer_id not in current_streamers:
+                if streamer_id in self.linger_streamers:
+                    self.linger_streamers[streamer_id] -= 1
+                    if self.linger_streamers[streamer_id] <= 0:
+                        del self.linger_streamers[streamer_id]
+                else:
+                    self.linger_streamers[streamer_id] = 2
 
         for streamer_id in list(self.linger_streamers.keys()):
             if streamer_id in current_streamers:

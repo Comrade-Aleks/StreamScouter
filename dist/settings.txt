@@ -1,7 +1,7 @@
 barony
 3
 300
-498
+424
 True
 default.wav
 0.5

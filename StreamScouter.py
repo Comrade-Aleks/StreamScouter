@@ -15,8 +15,6 @@ import winreg
 import sys
 import logging
 
-
-
 os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
 root = tk.Tk()
@@ -56,6 +54,7 @@ first_run = True
 minimized_at = 0
 tracking_thread = None
 is_updating = False
+cached_game_id = None
 
 def save_settings(game_name, streamer_count, width, height):
     settings_manager.save_settings(game_name, streamer_count, width, height, notify_var, sound_file, volume_var, layout.launch_at_startup_var.get())
@@ -121,38 +120,30 @@ def track_changes(game_name, streamer_count):
     stop_tracking.clear()
 
     while not stop_tracking.is_set():
-        game_id = twitch_api.get_game_id(game_name)
-        if not game_id:
-            show_error(f"Game '{game_name}' not found on Twitch.")
-            return
+        global cached_game_id
+        if not cached_game_id:
+            cached_game_id = twitch_api.get_game_id(game_name)
+            if not cached_game_id:
+                show_error(f"Game '{game_name}' not found on Twitch.")
+                return
         
-        top_streams = tracker.get_top_streams(game_id, streamer_count)
+        top_streams = tracker.get_top_streams(cached_game_id, streamer_count)
         layout.total_streamers_count = len(top_streams)
         streamer_data = tracker.process_streamers(top_streams)
 
-        handle_new_streamers(streamer_data)
-        update_ui(streamer_data)
+        process_streamers_and_update_ui(streamer_data)
         first_run = False
         countdown_timer()
 
 def show_error(message):
     root.after(0, lambda: messagebox.showerror("Error", message))
 
-def handle_new_streamers(streamer_data):
+def process_streamers_and_update_ui(streamer_data):
     global seen_streamers, minimized_at, first_run
+
     current_ids = {stream["id"] for stream in streamer_data}
     new_streamer_ids = current_ids - seen_streamers
 
-    if new_streamer_ids and not first_run:
-        if minimized_at == 0 or time.time() - minimized_at >= 30:
-            if notify_var.get():
-                notification_manager.play_notification()
-            if root.state() == 'withdrawn':
-                tray_icon_manager.start_blinking_icon()
-    
-    seen_streamers = current_ids | set(tracker.linger_streamers.keys())
-
-def update_ui(streamer_data):
     if root.state() != 'withdrawn':
         root.after(0, lambda: clear_canvas(layout.canvas_frame))
         for stream in streamer_data:
@@ -165,10 +156,25 @@ def update_ui(streamer_data):
             text=f"{shown_count}/{total_count} streamers shown"
         ))
 
+    if new_streamer_ids and not first_run:
+        if minimized_at == 0 or time.time() - minimized_at >= 10:
+            if notify_var.get():
+                notification_manager.play_notification()
+            if root.state() == 'withdrawn':
+                tray_icon_manager.start_blinking_icon()
+
+    seen_streamers = current_ids | set(tracker.linger_streamers.keys())
+
+
 def countdown_timer():
-    for i in range(30, 0, -1):
+    for i in range(10, 0, -1):
         if stop_tracking.is_set():
             return
+
+        if i <= 1:
+            root.after(0, lambda: layout.track_button.config(state=tk.DISABLED))
+        if i > 1:
+            root.after(0, lambda: layout.track_button.config(state=tk.NORMAL))
 
         root.after(0, lambda t=i: layout.timer_label.config(text=f"Next refresh in: {t}s"))
         time.sleep(1)
@@ -197,8 +203,10 @@ def update_streamers():
             tracking_thread.join()
 
         stop_tracking.clear()
+        global cached_game_id
+        cached_game_id = None
 
-        root.after(0, lambda: layout.timer_label.config(text="Next refresh in: 30s"))
+        root.after(0, lambda: layout.timer_label.config(text="Next refresh in: 10s"))
 
         game_name = layout.game_entry.get()
         streamer_count = int(layout.count_entry.get())

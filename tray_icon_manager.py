@@ -1,6 +1,6 @@
 import threading
 from pystray import Icon, MenuItem as item
-from PIL import Image, ImageDraw, ImageEnhance
+from PIL import Image
 import time
 import os
 import sys

@@ -7,6 +7,7 @@ from PIL import Image, ImageTk
 import requests
 from io import BytesIO
 import threading
+import CheckForUpdate
 
 class Layout:
     def __init__(self, root, config, callbacks):
@@ -18,9 +19,9 @@ class Layout:
 
     def initialize_layout(self):
         """Initialize the layout for the StreamScouter application."""
-        self.root.title("StreamScouter")
+        self.root.title(f"StreamScouter - Version {CheckForUpdate.Version}")
         self.root.geometry(f"{self.config['default_width']}x{self.config['default_height']}")
-        self.root.minsize(200, 300)
+        self.root.minsize(274, 361)
 
         if hasattr(sys, "_MEIPASS"):
             icon_path = os.path.join(sys._MEIPASS, "TwitchScout.ico")
@@ -48,7 +49,12 @@ class Layout:
         self.count_entry.insert(0, str(self.config['default_count'] or ""))
         self.count_entry.pack(fill=tk.X, padx=10)
 
-        self.track_button = tk.Button(self.main_tab, text="Track Streamers", command=self.callbacks['update_streamers'])
+        self.track_button = tk.Button(
+            self.main_tab, 
+            text="Track Streamers", 
+            command=self.callbacks['update_streamers'], 
+            state=tk.DISABLED
+        )
         self.track_button.pack()
 
         tk.Button(self.main_tab, text="Stop Tracking", command=self.callbacks['stop_tracking']).pack()
@@ -64,7 +70,7 @@ class Layout:
 
         #refresh timer label
         self.timer_label = tk.Label(
-            info_frame, text="Next refresh in: 30s", anchor="e", bg="#2e2e2e", fg="#ffffff"
+            info_frame, text="Next refresh in: 10s", anchor="e", bg="#2e2e2e", fg="#ffffff"
         )
         self.timer_label.pack(side=tk.RIGHT, fill=tk.X, expand=True)
 

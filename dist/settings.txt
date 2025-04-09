@@ -1,7 +1,7 @@
-barony
-3
-300
-424
+Bujingai: The Forsaken City
+10
+274
+361
 True
 default.wav
 0.5

@@ -3,21 +3,25 @@ import tkinter as tk
 from tkinter import messagebox
 import os
 import threading
+import shutil
+import zipfile
+import sys
+import subprocess
 
-Version = "v2.6.3"
+Version = "v2.6.5"
 REPO_OWNER = "Comrade-Aleks"
 REPO_NAME = "StreamScouter"
 MUTE_FILE = "mute_update_notifications.txt"
+UPDATE_ZIP_NAME = "StreamScouter.zip"
+UPDATE_FOLDER_NAME = "StreamScouter"
 
 def get_all_releases():
     """Fetch all releases from the GitHub repository."""
     url = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases"
     response = requests.get(url)
     if response.status_code == 200:
-        releases = response.json()
-        return releases
-    else:
-        return []
+        return response.json()
+    return []
 
 def is_muted(version):
     """Check if a specific version is muted."""
@@ -52,75 +56,125 @@ def clean_mute_file(current_version):
     if valid_versions:
         mute_notifications(valid_versions)
     else:
-        unmute_notifications() 
+        unmute_notifications()
 
 def compare_versions(current, latest):
-    """Compare version numbers and determine if it's a major or minor update."""
-    current_parts = list(map(int, current.lstrip("v").strip().split(".")))
-    latest_parts = list(map(int, latest.lstrip("v").strip().split(".")))
+    """Compare version numbers and determine if an update is available."""
+    current_parts = list(map(int, current.lstrip("v").split(".")))
+    latest_parts = list(map(int, latest.lstrip("v").split(".")))
 
     for current_part, latest_part in zip(current_parts, latest_parts):
         if latest_part > current_part:
-            return "major" if current_parts.index(current_part) == 0 else "minor"
+            return True
         elif latest_part < current_part:
-            return "none"
+            return False
 
-    return "none"
+    return len(latest_parts) > len(current_parts)
+
+def schedule_update(temp_dir):
+    """Schedule the update to replace files after the application exits."""
+    current_folder = os.path.dirname(os.path.abspath(sys.argv[0]))
+    updater_script = os.path.join(temp_dir, "update_script.bat")
+    exe_name = os.path.basename(sys.argv[0])
+
+    # This creates a batch script that will run after the application closes
+    # It will update the program and whatnot
+    with open(updater_script, "w") as f:
+        f.write(f"""
+        @echo off
+        echo Updating StreamScouter...
+        timeout /t 2 >nul
+        taskkill /f /im "{exe_name}" >nul 2>&1
+        xcopy "{temp_dir}\\StreamScouter\\*" "{current_folder}" /E /H /C /Y >nul
+        rmdir /S /Q "{temp_dir}\\StreamScouter" >nul 2>&1
+        rmdir /S /Q "{temp_dir}" >nul 2>&1
+        del /Q "{updater_script}" >nul
+        start "" "{os.path.join(current_folder, exe_name)}"
+        exit
+        """)
+    subprocess.Popen(updater_script, shell=True)
+    sys.exit()
+
+def download_and_extract_update(download_url):
+    """Download and prepare the update zip file."""
+    try:
+        # Downloads the zip file
+        response = requests.get(download_url, stream=True)
+        with open(UPDATE_ZIP_NAME, "wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+
+        temp_dir = "temp_update"
+        os.makedirs(temp_dir, exist_ok=True)
+        with zipfile.ZipFile(UPDATE_ZIP_NAME, "r") as zip_ref:
+            zip_ref.extractall(temp_dir)
+
+        schedule_update(temp_dir)
+
+    except Exception as e:
+        messagebox.showerror("Update Failed", f"An error occurred during the update: {e}")
+    finally:
+        if os.path.exists(UPDATE_ZIP_NAME):
+            os.remove(UPDATE_ZIP_NAME)
 
 def show_update_popup():
-    """Show the update notification popup."""
+    """Show the update notification popup if an update is available."""
     releases = get_all_releases()
     if not releases:
-        return 
+        return
 
     clean_mute_file(Version)
-
-    root = tk.Tk()
-    root.withdraw()
 
     muted_versions = []
     if os.path.exists(MUTE_FILE):
         with open(MUTE_FILE, "r") as f:
             muted_versions = f.read().splitlines()
 
-    updates_to_notify = []
-    current_parts = list(map(int, Version.lstrip("v").split(".")))
-    for release in releases:
-        version = release["tag_name"].strip()
-        version_parts = list(map(int, version.lstrip("v").split(".")))
-        if version_parts > current_parts and version not in muted_versions:
-            updates_to_notify.append((version, release.get("body", "No changelog available.")))
+    latest_release = releases[0]
+    latest_version = latest_release["tag_name"].strip()
 
-    updates_to_notify.sort(key=lambda x: list(map(int, x[0].lstrip("v").split("."))), reverse=True)
+    if compare_versions(Version, latest_version) and latest_version not in muted_versions:
+        download_url = None
+        for asset in latest_release["assets"]:
+            if asset["name"] == "StreamScouter.zip":
+                download_url = asset["browser_download_url"]
+                break
 
-    if updates_to_notify:
-        update_message = ""
-        for version, changelog in updates_to_notify:
-            update_type = compare_versions(Version, version)
-            update_message += f"{update_type.capitalize()} Update ({version}):\n{changelog}\n\n"
+        if not download_url:
+            messagebox.showerror("Update Error", "No update file found in the latest release.")
+            return
 
-        def mute_all():
-            for version, _ in updates_to_notify:
-                muted_versions.append(version)
+        root = tk.Tk()
+        root.withdraw()
+
+        def update_now():
+            popup.destroy()
+            download_and_extract_update(download_url)
+
+        def mute_until_next_update():
+            muted_versions.append(latest_version)
             mute_notifications(muted_versions)
             popup.destroy()
 
-        popup = tk.Toplevel(root)
-        popup.title("Update Notifications")
-        tk.Label(popup, text=update_message, justify="left", wraplength=400).pack(pady=10, padx=10)
+        def open_github_page():
+            import webbrowser
+            webbrowser.open(f"https://github.com/{REPO_OWNER}/{REPO_NAME}/releases")
 
-        mute_button = tk.Button(popup, text="Mute All", command=mute_all)
+        popup = tk.Toplevel(root)
+        popup.title("Update Available")
+        tk.Label(popup, text=f"A new version ({latest_version}) is available!", font=("Arial", 14)).pack(pady=10)
+        tk.Label(popup, text=f"Changelog:\n{latest_release.get('body', 'No changelog available.')}", justify="left", wraplength=400).pack(pady=10, padx=10)
+
+        update_button = tk.Button(popup, text="Update Now", command=update_now)
+        update_button.pack(side="left", padx=10, pady=10)
+
+        mute_button = tk.Button(popup, text="Mute Until Next Update", command=mute_until_next_update)
         mute_button.pack(side="left", padx=10, pady=10)
 
-        close_button = tk.Button(popup, text="Close Without Muting", command=popup.destroy)
-        close_button.pack(side="right", padx=10, pady=10)
+        manual_update_button = tk.Button(popup, text="Manual Update", command=open_github_page)
+        manual_update_button.pack(side="right", padx=10, pady=10)
 
         popup.mainloop()
-
-    if not updates_to_notify and os.path.exists(MUTE_FILE):
-        unmute_notifications()
-
-    root.destroy()
 
 def check_for_update_after_startup():
     """Run the update checker after the main application starts."""

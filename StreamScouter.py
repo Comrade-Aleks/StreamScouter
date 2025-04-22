@@ -142,15 +142,22 @@ def process_streamers_and_update_ui(streamer_data):
     global seen_streamers, minimized_at, first_run
 
     current_ids = {stream["id"] for stream in streamer_data}
-    new_streamer_ids = current_ids - seen_streamers
+    new_streamer_ids = current_ids - {s["id"] for s in seen_streamers}
 
     if root.state() != 'withdrawn':
         root.after(0, lambda: clear_canvas(layout.canvas_frame))
         for stream in streamer_data:
-            root.after(0, lambda s=stream: layout.add_item_to_canvas(s["name"], s["link"], s["profile_picture"]))
+            root.after(0, lambda s=stream: layout.add_item_to_canvas(
+                s["name"], s["link"], s["profile_picture"], linger_duration=None, remaining_linger=None
+            ))
             stream_links[stream["id"]] = stream["link"]
+        
+        for lingering in tracker.linger_streamers:
+            root.after(0, lambda s=lingering: layout.add_item_to_canvas(
+                s["name"], s["link"], s["profile_picture"], StreamerTracker.linger_duration, remaining_linger=s["countdown"]
+            ))
 
-        shown_count = len(streamer_data)
+        shown_count = len(streamer_data) + len(tracker.linger_streamers)
         total_count = layout.total_streamers_count
         root.after(0, lambda: layout.streamer_count_label.config(
             text=f"{shown_count}/{total_count} streamers shown"
@@ -163,8 +170,7 @@ def process_streamers_and_update_ui(streamer_data):
             if root.state() == 'withdrawn':
                 tray_icon_manager.start_blinking_icon()
 
-    seen_streamers = current_ids | set(tracker.linger_streamers.keys())
-
+    seen_streamers = streamer_data + tracker.linger_streamers
 
 def countdown_timer():
     for i in range(10, 0, -1):
@@ -260,6 +266,7 @@ def start_tracking_on_launch():
         return
     if not default_game:
         logging.error("Default game is not set. Cannot start tracking.")
+        root.after(1000, lambda: layout.track_button.config(state=tk.NORMAL))
         return
     try:
         logging.debug(f"Starting tracking thread for game: {default_game}, count: {default_count}")

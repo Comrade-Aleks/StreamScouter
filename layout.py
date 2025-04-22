@@ -242,8 +242,19 @@ class Layout:
             activeforeground=dark_bg
         ).pack(pady=5)
 
-    def add_item_to_canvas(self, text, link=None, image_url=None):
-        item_frame = tk.Frame(self.canvas_frame, bg="#2e2e2e")
+    def add_item_to_canvas(self, text, link=None, image_url=None, linger_duration=None, remaining_linger=None):
+        if linger_duration and remaining_linger is not None and linger_duration > 0:
+            color1 = (129, 90, 192) #purple
+            color2 = (255, 0, 0) #red
+            ratio = max(0, min(remaining_linger / linger_duration, 1))
+            r = int(color2[0] * (1 - ratio) + color1[0] * ratio)
+            g = int(color2[1] * (1 - ratio) + color1[1] * ratio)
+            b = int(color2[2] * (1 - ratio) + color1[2] * ratio)
+            bg_color = f"#{r:02x}{g:02x}{b:02x}"
+        else:
+            bg_color = "#2e2e2e"
+
+        item_frame = tk.Frame(self.canvas_frame, bg=bg_color)
         item_frame.pack(fill=tk.X)
 
         def load_image():
@@ -255,14 +266,14 @@ class Layout:
                 tk_img = ImageTk.PhotoImage(img)
 
                 def update_ui():
-                    img_label = tk.Label(item_frame, image=tk_img, bg="#2e2e2e", cursor="hand2" if link else "arrow")
+                    img_label = tk.Label(item_frame, image=tk_img, bg=bg_color, cursor="hand2" if link else "arrow")
                     img_label.image = tk_img
                     img_label.pack(side=tk.LEFT)
 
                     if link:
                         img_label.bind("<Button-1>", lambda e: webbrowser.open(link))
 
-                    text_label = tk.Label(item_frame, text=text, bg="#2e2e2e", fg="#ffffff", anchor="w", cursor="hand2" if link else "arrow")
+                    text_label = tk.Label(item_frame, text=text, bg=bg_color, fg="#ffffff", anchor="w", cursor="hand2" if link else "arrow")
                     text_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
                     if link:
@@ -270,15 +281,15 @@ class Layout:
 
                 self.root.after(0, update_ui)
             except Exception as e:
-                self.root.after(0, lambda: self.add_text_only_item(item_frame, text, link))
+                self.root.after(0, lambda: self.add_text_only_item(item_frame, text, link, bg_color))
 
         if image_url:
             threading.Thread(target=load_image, daemon=True).start()
         else:
-            self.add_text_only_item(item_frame, text, link)
+            self.add_text_only_item(item_frame, text, link, bg_color)
 
-    def add_text_only_item(self, item_frame, text, link):
-        text_label = tk.Label(item_frame, text=text, bg="#2e2e2e", fg="#ffffff", anchor="w", cursor="hand2" if link else "arrow")
+    def add_text_only_item(self, item_frame, text, link, bg_color):
+        text_label = tk.Label(item_frame, text=text, bg=bg_color, fg="#ffffff", anchor="w", cursor="hand2" if link else "arrow")
         text_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         if link:

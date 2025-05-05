@@ -82,26 +82,10 @@ def save_client_info():
     settings_manager.save_env_variable("CLIENT_SECRET", client_secret)
     messagebox.showinfo("Success", "Client ID and Secret saved!")
 
-def quit_app():
-    save_settings(layout.game_entry.get(), layout.count_entry.get(), root.winfo_width(), root.winfo_height())
-    if tray_icon_manager.tray_icon:
-        tray_icon_manager.stop_tray_icon()
-    root.destroy()
-    sys.exit()
-
-def on_close():
-    root.withdraw()
-    tray_icon_manager.minimize_to_tray()
-
-def on_show():
-    """Restore the application window and reset the tray icon."""
-    root.deiconify()
-    tray_icon_manager.stop_blinking_icon()
-    if tray_icon_manager.tray_icon:
-        tray_icon_manager.tray_icon.stop()
-        tray_icon_manager.tray_icon = None
-    
-tray_icon_manager = TrayIconManager(root, on_show, lambda: quit_app())
+tray_icon_manager = TrayIconManager(
+    root=root,
+    on_quit=lambda: tray_icon_manager.quit_app(save_settings, layout)
+)
 
 def toggle_notifications():
     print(f"Notifications {'enabled' if notify_var.get() else 'disabled'}.")
@@ -145,7 +129,7 @@ def process_streamers_and_update_ui(streamer_data):
     new_streamer_ids = current_ids - {s["id"] for s in seen_streamers}
 
     if root.state() != 'withdrawn':
-        root.after(0, lambda: clear_canvas(layout.canvas_frame))
+        root.after(0, lambda: Layout.clear_canvas(layout.canvas_frame))
         for stream in streamer_data:
             root.after(0, lambda s=stream: layout.add_item_to_canvas(
                 s["name"], s["link"], s["profile_picture"], linger_duration=None, remaining_linger=None
@@ -162,7 +146,7 @@ def process_streamers_and_update_ui(streamer_data):
         root.after(0, lambda: layout.streamer_count_label.config(
             text=f"{shown_count}/{total_count} streamers shown"
         ))
-
+    
     if new_streamer_ids and not first_run:
         if minimized_at == 0 or time.time() - minimized_at >= 10:
             if notify_var.get():
@@ -186,12 +170,6 @@ def countdown_timer():
         time.sleep(1)
 
     root.after(0, lambda: layout.timer_label.config(text="Refreshing streams..."))
-
-
-def clear_canvas(canvas_frame):
-    """Clear all items from the canvas."""
-    for widget in canvas_frame.winfo_children():
-        widget.destroy()
 
 def update_streamers():
     global tracking_thread, stop_tracking, is_updating
@@ -304,5 +282,5 @@ layout = Layout(
 
 root.after(0, start_tracking_on_launch)
 
-root.protocol("WM_DELETE_WINDOW", on_close)
+root.bind("<Unmap>", lambda event: tray_icon_manager.on_minimize() if root.state() == "iconic" else None)
 root.mainloop()

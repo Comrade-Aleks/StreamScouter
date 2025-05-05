@@ -8,7 +8,7 @@ import zipfile
 import sys
 import subprocess
 
-Version = "v2.7.0"
+Version = "v2.7.1"
 REPO_OWNER = "Comrade-Aleks"
 REPO_NAME = "StreamScouter"
 MUTE_FILE = "mute_update_notifications.txt"

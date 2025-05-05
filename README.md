@@ -38,6 +38,16 @@ Also, the api has a maximum returns per request, so to make sure this is not exc
 
 
 
-Future updates will include:
+Future updates may include:
 - The ability to remember and remind about specific streamers you wish to track.
-- more settings, maybe the ability to remove profile pictures. 
+- more settings, maybe the ability to change the amount of refreshes streamers stay for after they are not detected.
+- no category following 
+- display game and how long they are live and maybe more information?
+- an option for logging streamers
+- better UI? 
+- category suggestions when writing?
+- auto reopen after updating
+- not remake the whole list on canavas, so to save processing time
+- fixing the scrolling issue
+
+Idea for streamscouter, i need to write code for a new tab where you can pin categories and/or people and set individuale sound effects for them. to be notified

@@ -1,14 +1,13 @@
 import threading
-from pystray import Icon, MenuItem as item
+from pystray import Icon, MenuItem as item, Menu  # Add this import
 from PIL import Image
 import time
 import os
 import sys
 
 class TrayIconManager:
-    def __init__(self, root, on_show, on_quit):
+    def __init__(self, root, on_quit):
         self.root = root
-        self.on_show = on_show
         self.on_quit = on_quit
         self.tray_icon = None
         self.blinking = False
@@ -45,14 +44,16 @@ class TrayIconManager:
         """Minimize the app to the system tray."""
         if not self.tray_icon:
             if self.default_icon:
+                menu = Menu(
+                    item("Show", self.on_show, default=True),
+                    item("Quit", self.on_quit)
+                )
                 self.tray_icon = Icon(
                     "StreamScouter",
                     self.default_icon,
-                    menu=(item("Show", self.on_show), item("Quit", self.on_quit)),
+                    menu=menu
                 )
                 threading.Thread(target=self.tray_icon.run, daemon=True).start()
-            else:
-                print("Failed to load tray icon. Tray functionality will not work.")
 
     def start_blinking_icon(self):
         """Start blinking the tray icon."""
@@ -83,6 +84,25 @@ class TrayIconManager:
 
     def stop_tray_icon(self):
         """Stop and remove the tray icon."""
+        if self.tray_icon:
+            self.tray_icon.stop()
+            self.tray_icon = None
+        
+    def quit_app(self, save_settings, layout):
+        save_settings(layout.game_entry.get(), layout.count_entry.get(), self.root.winfo_width(), self.root.winfo_height())
+        if self.tray_icon:
+            self.stop_tray_icon()
+        self.root.destroy()
+        sys.exit()
+
+    def on_minimize(self):
+        self.root.withdraw()
+        self.minimize_to_tray()
+
+    def on_show(self):
+        """Restore the application window and reset the tray icon."""
+        self.root.deiconify()
+        self.stop_blinking_icon()
         if self.tray_icon:
             self.tray_icon.stop()
             self.tray_icon = None

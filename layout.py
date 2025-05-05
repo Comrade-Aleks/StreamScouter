@@ -294,3 +294,8 @@ class Layout:
 
         if link:
             text_label.bind("<Button-1>", lambda e: webbrowser.open(link))
+
+    def clear_canvas(canvas_frame):
+        """Clear all items from the canvas."""
+        for widget in canvas_frame.winfo_children():
+            widget.destroy()

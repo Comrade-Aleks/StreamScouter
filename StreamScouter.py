@@ -13,19 +13,12 @@ import time
 import os
 import winreg
 import sys
-import logging
 
 os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
 root = tk.Tk()
 
 CheckForUpdate.check_for_update_after_startup()
-
-logging.basicConfig(
-    filename="StreamScouter.log",
-    level=logging.DEBUG,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
 
 load_dotenv()
 
@@ -129,7 +122,6 @@ def process_streamers_and_update_ui(streamer_data):
     new_streamer_ids = current_ids - {s["id"] for s in seen_streamers}
 
     if root.state() != 'withdrawn':
-        root.after(0, lambda: Layout.clear_canvas(layout.canvas_frame))
         for stream in streamer_data:
             root.after(0, lambda s=stream: layout.add_item_to_canvas(
                 s["name"], s["link"], s["profile_picture"], linger_duration=None, remaining_linger=None
@@ -238,22 +230,18 @@ def toggle_launch_at_startup():
 
 def start_tracking_on_launch():
     global tracking_thread
-    logging.debug("start_tracking_on_launch called")
     if tracking_thread and tracking_thread.is_alive():
-        logging.debug("Tracking thread already running.")
         return
     if not default_game:
-        logging.error("Default game is not set. Cannot start tracking.")
         root.after(1000, lambda: layout.track_button.config(state=tk.NORMAL))
         return
     try:
-        logging.debug(f"Starting tracking thread for game: {default_game}, count: {default_count}")
         tracking_thread = threading.Thread(
             target=track_changes, args=(default_game, default_count), daemon=True
         )
         tracking_thread.start()
     except Exception as e:
-        logging.error(f"Error starting tracking thread: {e}")
+        pass
 
 layout = Layout(
     root,

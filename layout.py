@@ -244,8 +244,8 @@ class Layout:
 
     def add_item_to_canvas(self, text, link=None, image_url=None, linger_duration=None, remaining_linger=None):
         if linger_duration and remaining_linger is not None and linger_duration > 0:
-            color1 = (129, 90, 192) #purple
-            color2 = (255, 0, 0) #red
+            color1 = (129, 90, 192)  # purple
+            color2 = (255, 0, 0)  # red
             ratio = max(0, min(remaining_linger / linger_duration, 1))
             r = int(color2[0] * (1 - ratio) + color1[0] * ratio)
             g = int(color2[1] * (1 - ratio) + color1[1] * ratio)
@@ -254,39 +254,60 @@ class Layout:
         else:
             bg_color = "#2e2e2e"
 
-        item_frame = tk.Frame(self.canvas_frame, bg=bg_color)
-        item_frame.pack(fill=tk.X)
+        existing_widgets = {
+            getattr(widget, "streamer_id", None): widget
+            for widget in self.canvas_frame.winfo_children()
+            if widget.winfo_exists()
+        }
 
-        def load_image():
-            try:
-                response = requests.get(image_url, timeout=5)
-                response.raise_for_status()
-                img_data = BytesIO(response.content)
-                img = Image.open(img_data).resize((30, 30))
-                tk_img = ImageTk.PhotoImage(img)
+        streamer_id = text
+        if remaining_linger == 0:
+            widget = existing_widgets[streamer_id]
+            widget.destroy()
 
-                def update_ui():
-                    img_label = tk.Label(item_frame, image=tk_img, bg=bg_color, cursor="hand2" if link else "arrow")
-                    img_label.image = tk_img
-                    img_label.pack(side=tk.LEFT)
-
-                    if link:
-                        img_label.bind("<Button-1>", lambda e: webbrowser.open(link))
-
-                    text_label = tk.Label(item_frame, text=text, bg=bg_color, fg="#ffffff", anchor="w", cursor="hand2" if link else "arrow")
-                    text_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
-
-                    if link:
-                        text_label.bind("<Button-1>", lambda e: webbrowser.open(link))
-
-                self.root.after(0, update_ui)
-            except Exception as e:
-                self.root.after(0, lambda: self.add_text_only_item(item_frame, text, link, bg_color))
-
-        if image_url:
-            threading.Thread(target=load_image, daemon=True).start()
+        if streamer_id in existing_widgets:
+            widget = existing_widgets[streamer_id]
+            widget.pack_forget()
+            widget.pack(fill=tk.X)
+            widget.configure(bg=bg_color)
+            for child in widget.winfo_children():
+                if hasattr(child, "configure"):
+                    child.configure(bg=bg_color)
         else:
-            self.add_text_only_item(item_frame, text, link, bg_color)
+            item_frame = tk.Frame(self.canvas_frame, bg=bg_color)
+            item_frame.pack(fill=tk.X)
+            item_frame.streamer_id = streamer_id
+
+            def load_image():
+                try:
+                    response = requests.get(image_url, timeout=5)
+                    response.raise_for_status()
+                    img_data = BytesIO(response.content)
+                    img = Image.open(img_data).resize((30, 30))
+                    tk_img = ImageTk.PhotoImage(img)
+
+                    def update_ui():
+                        img_label = tk.Label(item_frame, image=tk_img, bg=bg_color, cursor="hand2" if link else "arrow")
+                        img_label.image = tk_img
+                        img_label.pack(side=tk.LEFT)
+
+                        if link:
+                            img_label.bind("<Button-1>", lambda e: webbrowser.open(link))
+
+                        text_label = tk.Label(item_frame, text=text, bg=bg_color, fg="#ffffff", anchor="w", cursor="hand2" if link else "arrow")
+                        text_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+                        if link:
+                            text_label.bind("<Button-1>", lambda e: webbrowser.open(link))
+
+                    self.root.after(0, update_ui)
+                except Exception as e:
+                    self.root.after(0, lambda: self.add_text_only_item(item_frame, text, link, bg_color))
+
+            if image_url:
+                threading.Thread(target=load_image, daemon=True).start()
+            else:
+                self.add_text_only_item(item_frame, text, link, bg_color)
 
     def add_text_only_item(self, item_frame, text, link, bg_color):
         text_label = tk.Label(item_frame, text=text, bg=bg_color, fg="#ffffff", anchor="w", cursor="hand2" if link else "arrow")
@@ -294,8 +315,3 @@ class Layout:
 
         if link:
             text_label.bind("<Button-1>", lambda e: webbrowser.open(link))
-
-    def clear_canvas(canvas_frame):
-        """Clear all items from the canvas."""
-        for widget in canvas_frame.winfo_children():
-            widget.destroy()

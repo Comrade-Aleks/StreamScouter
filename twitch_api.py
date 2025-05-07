@@ -74,6 +74,22 @@ class TwitchAPI:
 
         return profile_pictures
 
+    def search_categories(self, query):
+        """Search for categories on Twitch based on the query."""
+        url = "https://api.twitch.tv/helix/search/categories"
+        headers = {
+            "Client-ID": self.client_id,
+            "Authorization": f"Bearer {self.access_token}"
+        }
+        params = {"query": query, "first": 10}
+        response = requests.get(url, headers=headers, params=params)
+
+        if response.status_code == 200:
+            data = response.json()
+            return [{"id": item["id"], "name": item["name"]} for item in data.get("data", [])]
+        else:
+            return []
+
 
 
 

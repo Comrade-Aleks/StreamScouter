@@ -13,6 +13,7 @@ import time
 import os
 import winreg
 import sys
+from screeninfo import get_monitors
 
 os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
@@ -26,7 +27,28 @@ SETTINGS_FILE = "settings.txt"
 ENV_FILE = ".env"
 
 settings_manager = SettingsManager(SETTINGS_FILE, ENV_FILE)
-default_game, default_count, default_width, default_height, default_notify, default_sound, default_volume, default_launch_at_startup = settings_manager.load_settings()
+
+def validate_window_position(x, y, width, height):
+    monitors = get_monitors()
+
+    for monitor in monitors:
+        if (
+            monitor.x <= x < monitor.x + monitor.width and
+            monitor.y <= y < monitor.y + monitor.height
+        ):
+            if x + int(width) > monitor.x + monitor.width:
+                x = monitor.x + monitor.width - int(width)
+            if y + int(height) > monitor.y + monitor.height:
+                y = monitor.y + monitor.height - int(height)
+            return x, y
+    primary_monitor = monitors[0]
+    return primary_monitor.x + 100, primary_monitor.y + 100
+
+default_game, default_count, default_width, default_height, default_notify, default_sound, default_volume, default_launch_at_startup, default_x, default_y = settings_manager.load_settings()
+
+# This is for setting and validating window position
+default_x, default_y = validate_window_position(default_x, default_y, default_width, default_height)
+root.geometry(f"{default_width}x{default_height}+{default_x}+{default_y}")
 
 notify_var = tk.BooleanVar(value=default_notify)
 sound_file = tk.StringVar(value=default_sound)
@@ -50,7 +72,11 @@ is_updating = False
 cached_game_id = None
 
 def save_settings(game_name, streamer_count, width, height):
-    settings_manager.save_settings(game_name, streamer_count, width, height, notify_var, sound_file, volume_var, layout.launch_at_startup_var.get())
+    x = root.winfo_x()
+    y = root.winfo_y()
+    settings_manager.save_settings(
+        game_name, streamer_count, width, height, notify_var, sound_file, volume_var, layout.launch_at_startup_var.get(), x, y
+    )
 
 def generate_access_token():
     client_id = layout.client_id_entry.get()
@@ -243,6 +269,18 @@ def start_tracking_on_launch():
     except Exception as e:
         pass
 
+def on_close():
+    """Save settings and close the application."""
+    save_settings(
+        layout.game_entry.get(),
+        layout.count_entry.get(),
+        root.winfo_width(),
+        root.winfo_height()
+    )
+    tray_icon_manager.quit_app(save_settings, layout)
+
+root.protocol("WM_DELETE_WINDOW", on_close)
+
 layout = Layout(
     root,
     config={
@@ -265,7 +303,8 @@ layout = Layout(
         "select_sound_file": select_sound_file,
         "update_volume": update_volume,
         "toggle_launch_at_startup": toggle_launch_at_startup,
-    }
+    },
+    twitch_api=twitch_api
 )
 
 root.after(0, start_tracking_on_launch)

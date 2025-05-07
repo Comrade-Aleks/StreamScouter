@@ -8,13 +8,17 @@ import requests
 from io import BytesIO
 import threading
 import CheckForUpdate
+from threading import Timer
 
 class Layout:
-    def __init__(self, root, config, callbacks):
+    def __init__(self, root, config, callbacks, twitch_api):
         self.root = root
         self.config = config
         self.callbacks = callbacks
+        self.twitch_api = twitch_api
         self.total_streamers_count = 0
+        self.dropdown_window = None
+        self.search_timer = None
         self.initialize_layout()
 
     def initialize_layout(self):
@@ -43,6 +47,10 @@ class Layout:
         self.game_entry = tk.Entry(self.main_tab)
         self.game_entry.insert(0, self.config['default_game'] or "") 
         self.game_entry.pack(fill=tk.X, padx=10)
+        self.game_entry.bind("<KeyRelease>", self.search_categories)
+
+        self.dropdown_frame = tk.Frame(self.main_tab)
+        self.dropdown_frame.pack(fill=tk.X, padx=10)
 
         tk.Label(self.main_tab, text="Number of Streamers to Track:").pack()
         self.count_entry = tk.Entry(self.main_tab)
@@ -315,3 +323,102 @@ class Layout:
 
         if link:
             text_label.bind("<Button-1>", lambda e: webbrowser.open(link))
+
+    def search_categories(self, event):
+        """Search for categories based on the live input in the game entry field."""
+        if self.search_timer:
+            self.search_timer.cancel() 
+
+        query = self.game_entry.get().strip()
+        if not query:
+            self.clear_dropdown()
+            return
+
+        # Set a timer to delay the search
+        self.search_timer = Timer(0.3, lambda: self.perform_search(query))
+        self.search_timer.start()
+
+    def perform_search(self, query):
+        """Perform the actual search for categories."""
+        categories = self.twitch_api.search_categories(query)
+        self.show_dropdown(categories)
+
+    def show_dropdown(self, categories):
+        """Display the dropdown menu as a floating window."""
+        if not categories:
+            self.clear_dropdown()
+            return
+
+        if not self.dropdown_window:
+            # Create the dropdown window if it doesn't exist
+            self.dropdown_window = tk.Toplevel(self.root)
+            self.dropdown_window.wm_overrideredirect(True)
+
+        # Update the dropdown position and size
+        self.dropdown_window.geometry(self.get_dropdown_position(categories))
+
+        # Clear existing buttons
+        for widget in self.dropdown_window.winfo_children():
+            widget.destroy()
+
+        # Add buttons for the new categories
+        for category in categories:
+            button = tk.Button(
+                self.dropdown_window,
+                text=category["name"],
+                command=lambda name=category["name"]: self.select_category(name),
+                anchor="w"
+            )
+            button.pack(fill=tk.X)
+
+    def on_global_click(self, event):
+        """Close the dropdown menu if clicking outside of it."""
+        if self.dropdown_window:
+            # Check if the click is outside the dropdown window
+            x1 = self.dropdown_window.winfo_rootx()
+            y1 = self.dropdown_window.winfo_rooty()
+            x2 = x1 + self.dropdown_window.winfo_width()
+            y2 = y1 + self.dropdown_window.winfo_height()
+
+            if not (x1 <= event.x_root <= x2 and y1 <= event.y_root <= y2):
+                self.clear_dropdown()
+                self.root.unbind("<Button-1>")
+
+    def get_dropdown_position(self, categories):
+        """Calculate the position of the dropdown window relative to the entry field."""
+        x = self.game_entry.winfo_rootx()
+        y = self.game_entry.winfo_rooty() + self.game_entry.winfo_height()
+
+        # Update the dropdown position dynamically when the application moves
+        self.root.bind("<Configure>", lambda e: self.update_dropdown_position(categories))
+
+        if self.dropdown_window:
+            x = self.game_entry.winfo_rootx()
+            y = self.game_entry.winfo_rooty() + self.game_entry.winfo_height()
+            width = self.game_entry.winfo_width()
+            height = len(categories) * 26
+            self.dropdown_window.geometry(f"{int(width)}x{int(height)}+{int(x)}+{int(y)}")
+        width = self.game_entry.winfo_width()
+        height = len(categories) * 26
+        return f"{int(width)}x{int(height)}+{int(x)}+{int(y)}"
+
+    def select_category(self, category_name):
+        """Auto-fill the game entry field with the selected category and clear the dropdown."""
+        self.game_entry.delete(0, tk.END)
+        self.game_entry.insert(0, category_name)
+        self.clear_dropdown()
+
+    def clear_dropdown(self):
+        """Destroy the dropdown window if it exists."""
+        if self.dropdown_window:
+            self.dropdown_window.destroy()
+            self.dropdown_window = None
+    
+    def update_dropdown_position(self, categories):
+        """Update the position of the dropdown window when the application moves."""
+        if self.dropdown_window:
+            x = self.game_entry.winfo_rootx()
+            y = self.game_entry.winfo_rooty() + self.game_entry.winfo_height()
+            width = self.game_entry.winfo_width()
+            height = len(categories) * 26
+            self.dropdown_window.geometry(f"{int(width)}x{int(height)}+{int(x)}+{int(y)}")

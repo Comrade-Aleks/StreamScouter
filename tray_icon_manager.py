@@ -89,7 +89,13 @@ class TrayIconManager:
             self.tray_icon = None
         
     def quit_app(self, save_settings, layout):
-        save_settings(layout.game_entry.get(), layout.count_entry.get(), self.root.winfo_width(), self.root.winfo_height())
+        """Save settings and quit the application."""
+        save_settings(
+            layout.game_entry.get(),
+            layout.count_entry.get(),
+            self.root.winfo_width(),
+            self.root.winfo_height()
+        )
         if self.tray_icon:
             self.stop_tray_icon()
         self.root.destroy()

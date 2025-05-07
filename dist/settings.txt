@@ -1,8 +1,10 @@
-minecraft
+Minecraft
 10
-364
-572
-True
+343
+565
+False
 default.wav
 0.5
 False
+3354
+-867

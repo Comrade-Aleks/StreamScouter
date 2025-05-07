@@ -8,7 +8,7 @@ import zipfile
 import sys
 import subprocess
 
-Version = "v2.7.2"
+Version = "v2.7.3"
 REPO_OWNER = "Comrade-Aleks"
 REPO_NAME = "StreamScouter"
 MUTE_FILE = "mute_update_notifications.txt"
@@ -88,8 +88,8 @@ def schedule_update(temp_dir):
         xcopy "{temp_dir}\\StreamScouter\\*" "{current_folder}" /E /H /C /Y >nul
         rmdir /S /Q "{temp_dir}\\StreamScouter" >nul 2>&1
         rmdir /S /Q "{temp_dir}" >nul 2>&1
-        del /Q "{updater_script}" >nul
         start "" "{os.path.join(current_folder, exe_name)}"
+        del /Q "{updater_script}" >nul
         exit
         """)
     subprocess.Popen(updater_script, shell=True)

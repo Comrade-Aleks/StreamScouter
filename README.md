@@ -45,6 +45,9 @@ Future updates may include:
 - display game and how long they are live and maybe more information?
 - an option for logging streamers
 - better UI? 
-- category suggestions when writing?
-- auto reopen after updating
-- auto update settings on quit
+- fix auto reopen after updating not working
+
+added within v2.7.3
+- auto updates settings on quit
+- application remembers screen and location if restarted
+- categories will now be suggested when writing a category

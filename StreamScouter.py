@@ -149,13 +149,13 @@ def process_streamers_and_update_ui(streamer_data):
 
     if root.state() != 'withdrawn':
         for stream in streamer_data:
-            root.after(0, lambda s=stream: layout.add_item_to_canvas(
+            root.after(0, lambda s=stream: layout.add_item_to_main_canvas(
                 s["name"], s["link"], s["profile_picture"], linger_duration=None, remaining_linger=None
             ))
             stream_links[stream["id"]] = stream["link"]
         
         for lingering in tracker.linger_streamers:
-            root.after(0, lambda s=lingering: layout.add_item_to_canvas(
+            root.after(0, lambda s=lingering: layout.add_item_to_main_canvas(
                 s["name"], s["link"], s["profile_picture"], StreamerTracker.linger_duration, remaining_linger=s["countdown"]
             ))
 

@@ -37,8 +37,14 @@ class Layout:
         # Tab control
         self.tab_control = ttk.Notebook(self.root)
         self.main_tab = ttk.Frame(self.tab_control)
+        self.pinned_tab = ttk.Frame(self.tab_control)
+        self.log_tab = ttk.Frame(self.tab_control)
         self.settings_tab = ttk.Frame(self.tab_control)
+
+        # Add tabs in the specified order
         self.tab_control.add(self.main_tab, text="Tracker")
+        self.tab_control.add(self.pinned_tab, text="Pinned")
+        self.tab_control.add(self.log_tab, text="Log")
         self.tab_control.add(self.settings_tab, text="Settings")
         self.tab_control.pack(expand=1, fill="both")
 
@@ -85,53 +91,22 @@ class Layout:
         frame = tk.Frame(self.main_tab)
         frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
-        # Frame to hold canvas
-        canvas_container = tk.Frame(frame, bg="#815ac0", highlightthickness=1, highlightbackground="#815ac0")
-        canvas_container.grid(row=0, column=0, sticky="nsew")
+        # Generate the canvas using the helper method
+        self.result_canvas, self.canvas_frame = self.generate_canvas(frame)
 
-        # Create the Canvas inside the bordered container
-        self.result_canvas = tk.Canvas(
-            canvas_container,
-            bg="#2e2e2e",
-            highlightthickness=0
-        )
-        self.result_canvas.pack(fill=tk.BOTH, expand=True)
+        # Pinned tab layout
+        tk.Label(self.pinned_tab, text="Pinned Streamers", font=("Arial", 14)).pack(pady=10)
+        pin_frame = tk.Frame(self.pinned_tab)
+        pin_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        self.pinned_canvas, self.pin_canvas_frame = self.generate_canvas(pin_frame)
 
-        # Frame inside the Canvas
-        self.canvas_frame = tk.Frame(self.result_canvas, bg="#2e2e2e", padx=5, pady=5)
-        self.canvas_window = self.result_canvas.create_window((0, 0), window=self.canvas_frame, anchor="nw")
+        # Log tab layout
+        tk.Label(self.log_tab, text="Activity Log", font=("Arial", 14)).pack(pady=10)
+        log_frame = tk.Frame(self.log_tab)
+        log_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        self.log_canvas, self.log_canvas_frame = self.generate_canvas(log_frame)
 
-        # add scrolling functionality
-        self.canvas_frame.bind(
-            "<Configure>",
-            lambda e: self.result_canvas.configure(scrollregion=self.result_canvas.bbox("all"))
-        )
-        
-        # Add the Frame to the Canvas
-        self.canvas_window = self.result_canvas.create_window((0, 0), window=self.canvas_frame, anchor="nw")
-
-        # Create a vertical scrollbar
-        style = ttk.Style()
-        style.theme_use("default")
-        style.configure("#815ac0.Vertical.TScrollbar",
-                        gripcount=0,
-                        background="#815ac0",
-                        troughcolor="#2e2e2e",
-                        bordercolor="#4caf50",
-                        arrowcolor="#ffffff")
-        style.map("#815ac0.Vertical.TScrollbar",
-                  background=[("disabled", "#815ac0")])
-
-        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=self.result_canvas.yview, style="#815ac0.Vertical.TScrollbar")
-        scrollbar.grid(row=0, column=1, sticky="ns")
-
-        # Configure the Canvas to use the scrollbar
-        self.result_canvas.configure(yscrollcommand=scrollbar.set)
-
-        frame.grid_rowconfigure(0, weight=1)
-        frame.grid_columnconfigure(0, weight=1)
-
-        # tab layout
+        # Settings tab layout
         tk.Label(self.settings_tab, text="Client ID:").pack()
         self.client_id_entry = tk.Entry(self.settings_tab)
         self.client_id_entry.insert(0, self.config['CLIENT_ID'] or "")
@@ -195,62 +170,33 @@ class Layout:
         style.configure("Dark.TFrame", background=dark_bg)
         self.main_tab.configure(style="Dark.TFrame")
         self.settings_tab.configure(style="Dark.TFrame")
+        self.pinned_tab.configure(style="Dark.TFrame")
+        self.log_tab.configure(style="Dark.TFrame")
 
-        # Main tab
-        for widget in self.main_tab.winfo_children():
-            if isinstance(widget, tk.Label):
-                widget.configure(bg=dark_bg, fg=dark_fg)
-            elif isinstance(widget, tk.Entry):
-                widget.configure(bg=dark_bg, fg=dark_fg, insertbackground=dark_fg, highlightbackground=border_color, highlightcolor=border_color, highlightthickness=1)
-            elif isinstance(widget, tk.Button):
-                widget.configure(bg=accent_color, fg=dark_fg, activebackground=dark_fg, activeforeground=dark_bg)
-            elif isinstance(widget, tk.Frame):
-                widget.configure(bg=dark_bg)
+        # Apply dark mode to all tabs
+        for tab in [self.main_tab, self.settings_tab, self.pinned_tab, self.log_tab]:
+            for widget in tab.winfo_children():
+                if isinstance(widget, tk.Label):
+                    widget.configure(bg=dark_bg, fg=dark_fg)
+                elif isinstance(widget, tk.Entry):
+                    widget.configure(bg=dark_bg, fg=dark_fg, insertbackground=dark_fg, highlightbackground=border_color, highlightcolor=border_color, highlightthickness=1)
+                elif isinstance(widget, tk.Button):
+                    widget.configure(bg=accent_color, fg=dark_fg, activebackground=dark_fg, activeforeground=dark_bg)
+                elif isinstance(widget, tk.Frame):
+                    widget.configure(bg=dark_bg)
+                elif isinstance(widget, tk.Canvas):
+                    widget.configure(bg=dark_bg)
+                elif isinstance(widget, tk.Scale):
+                    widget.configure(
+                        bg=dark_bg, 
+                        fg=dark_fg, 
+                        troughcolor=accent_color, 
+                        highlightbackground=border_color,
+                        highlightcolor=border_color,
+                        highlightthickness=1
+                    )
 
-        # Settings tab
-        for widget in self.settings_tab.winfo_children():
-            if isinstance(widget, tk.Label):
-                widget.configure(bg=dark_bg, fg=dark_fg)
-            elif isinstance(widget, tk.Entry):
-                widget.configure(bg=dark_bg, fg=dark_fg, insertbackground=dark_fg, highlightbackground=border_color, highlightcolor=border_color, highlightthickness=1)
-            elif isinstance(widget, tk.Button):
-                widget.configure(bg=accent_color, fg=dark_fg, activebackground=dark_fg, activeforeground=dark_bg)
-            elif isinstance(widget, tk.Scale):
-                widget.configure(
-                    bg=dark_bg, 
-                    fg=dark_fg, 
-                    troughcolor=accent_color, 
-                    highlightbackground=border_color,
-                    highlightcolor=border_color,
-                    highlightthickness=1
-                )
-            elif isinstance(widget, ttk.Checkbutton):
-                widget.configure(style="Dark.TCheckbutton")
-            elif isinstance(widget, tk.Frame):
-                widget.configure(bg=dark_bg)
-
-        # Checkbutton styling
-        style.configure("Dark.TCheckbutton", background=dark_bg, foreground=dark_fg)
-        style.map("Dark.TCheckbutton", background=[("active", dark_bg)], foreground=[("active", dark_fg)])
-
-        self.notify_checkbox = tk.Checkbutton(
-            self.settings_tab, text="Enable New Streamer Notification",
-            variable=self.config['notify_var'], command=self.callbacks['toggle_notifications'],
-            bg=dark_bg, fg=dark_fg, selectcolor=accent_color, activebackground=dark_bg, activeforeground=dark_fg
-        )
-        self.notify_checkbox.pack(pady=5)
-
-        tk.Button(
-            self.settings_tab, 
-            text="Select Notification Sound", 
-            command=self.callbacks['select_sound_file'],
-            bg=accent_color, 
-            fg=dark_fg, 
-            activebackground=dark_fg, 
-            activeforeground=dark_bg
-        ).pack(pady=5)
-
-    def add_item_to_canvas(self, text, link=None, image_url=None, linger_duration=None, remaining_linger=None):
+    def add_item_to_main_canvas(self, text, link=None, image_url=None, linger_duration=None, remaining_linger=None):
         if linger_duration and remaining_linger is not None and linger_duration > 0:
             color1 = (129, 90, 192)  # purple
             color2 = (255, 0, 0)  # red
@@ -282,40 +228,10 @@ class Layout:
                 if hasattr(child, "configure"):
                     child.configure(bg=bg_color)
         else:
-            item_frame = tk.Frame(self.canvas_frame, bg=bg_color)
-            item_frame.pack(fill=tk.X)
-            item_frame.streamer_id = streamer_id
+            item_frame = self.create_item_frame(self.canvas_frame, streamer_id, text, link, image_url, bg_color)
 
-            def load_image():
-                try:
-                    response = requests.get(image_url, timeout=5)
-                    response.raise_for_status()
-                    img_data = BytesIO(response.content)
-                    img = Image.open(img_data).resize((30, 30))
-                    tk_img = ImageTk.PhotoImage(img)
-
-                    def update_ui():
-                        img_label = tk.Label(item_frame, image=tk_img, bg=bg_color, cursor="hand2" if link else "arrow")
-                        img_label.image = tk_img
-                        img_label.pack(side=tk.LEFT)
-
-                        if link:
-                            img_label.bind("<Button-1>", lambda e: webbrowser.open(link))
-
-                        text_label = tk.Label(item_frame, text=text, bg=bg_color, fg="#ffffff", anchor="w", cursor="hand2" if link else "arrow")
-                        text_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
-
-                        if link:
-                            text_label.bind("<Button-1>", lambda e: webbrowser.open(link))
-
-                    self.root.after(0, update_ui)
-                except Exception as e:
-                    self.root.after(0, lambda: self.add_text_only_item(item_frame, text, link, bg_color))
-
-            if image_url:
-                threading.Thread(target=load_image, daemon=True).start()
-            else:
-                self.add_text_only_item(item_frame, text, link, bg_color)
+        # Add the streamer to the log canvas
+        self.add_item_to_log_canvas(streamer_id=text, text=text, link=link, image_url=image_url)
 
     def add_text_only_item(self, item_frame, text, link, bg_color):
         text_label = tk.Label(item_frame, text=text, bg=bg_color, fg="#ffffff", anchor="w", cursor="hand2" if link else "arrow")
@@ -323,6 +239,65 @@ class Layout:
 
         if link:
             text_label.bind("<Button-1>", lambda e: webbrowser.open(link))
+
+    def add_item_to_log_canvas(self, streamer_id, text, link=None, image_url=None):
+        """Add a streamer to the log canvas, ensuring only one instance of each streamer."""
+        existing_widgets = {
+            getattr(widget, "streamer_id", None): widget
+            for widget in self.log_canvas_frame.winfo_children()
+            if widget.winfo_exists()
+        }
+
+        if streamer_id in existing_widgets:
+            return
+        
+        self.create_item_frame(self.log_canvas_frame, streamer_id, text, link, image_url)
+
+        self.log_canvas.update_idletasks()
+        self.log_canvas.configure(scrollregion=self.log_canvas.bbox("all"))
+
+    def add_item_to_pinned_canvas(self, streamer_id, text, link=None, image_url=None):
+        """Add a streamer to the pinned canvas."""
+        item_frame = self.create_item_frame(self.pin_canvas_frame, streamer_id, text, link, image_url)
+
+    def create_item_frame(self, parent_canvas, streamer_id, text, link=None, image_url=None, bg_color="#2e2e2e"):
+        """Create an item frame with optional image and text."""
+        item_frame = tk.Frame(parent_canvas, bg=bg_color)
+        item_frame.pack(fill=tk.X)
+        item_frame.streamer_id = streamer_id
+
+        def load_image():
+            try:
+                response = requests.get(image_url, timeout=5)
+                response.raise_for_status()
+                img_data = BytesIO(response.content)
+                img = Image.open(img_data).resize((30, 30))
+                tk_img = ImageTk.PhotoImage(img)
+
+                def update_ui():
+                    img_label = tk.Label(item_frame, image=tk_img, bg=bg_color, cursor="hand2" if link else "arrow")
+                    img_label.image = tk_img
+                    img_label.pack(side=tk.LEFT)
+
+                    if link:
+                        img_label.bind("<Button-1>", lambda e: webbrowser.open(link))
+
+                    text_label = tk.Label(item_frame, text=text, bg=bg_color, fg="#ffffff", anchor="w", cursor="hand2" if link else "arrow")
+                    text_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+                    if link:
+                        text_label.bind("<Button-1>", lambda e: webbrowser.open(link))
+
+                self.root.after(0, update_ui)
+            except Exception as e:
+                self.root.after(0, lambda: self.add_text_only_item(item_frame, text, link, bg_color))
+
+        if image_url:
+            threading.Thread(target=load_image, daemon=True).start()
+        else:
+            self.add_text_only_item(item_frame, text, link, bg_color)
+        
+        return item_frame
 
     def search_categories(self, event):
         """Search for categories based on the live input in the game entry field."""
@@ -350,18 +325,15 @@ class Layout:
             return
 
         if not self.dropdown_window:
-            # Create the dropdown window if it doesn't exist
             self.dropdown_window = tk.Toplevel(self.root)
             self.dropdown_window.wm_overrideredirect(True)
+            self.root.bind("<Button-1>", self.on_global_click)
 
-        # Update the dropdown position and size
         self.dropdown_window.geometry(self.get_dropdown_position(categories))
 
-        # Clear existing buttons
         for widget in self.dropdown_window.winfo_children():
             widget.destroy()
 
-        # Add buttons for the new categories
         for category in categories:
             button = tk.Button(
                 self.dropdown_window,
@@ -374,7 +346,6 @@ class Layout:
     def on_global_click(self, event):
         """Close the dropdown menu if clicking outside of it."""
         if self.dropdown_window:
-            # Check if the click is outside the dropdown window
             x1 = self.dropdown_window.winfo_rootx()
             y1 = self.dropdown_window.winfo_rooty()
             x2 = x1 + self.dropdown_window.winfo_width()
@@ -389,7 +360,6 @@ class Layout:
         x = self.game_entry.winfo_rootx()
         y = self.game_entry.winfo_rooty() + self.game_entry.winfo_height()
 
-        # Update the dropdown position dynamically when the application moves
         self.root.bind("<Configure>", lambda e: self.update_dropdown_position(categories))
 
         if self.dropdown_window:
@@ -422,3 +392,54 @@ class Layout:
             width = self.game_entry.winfo_width()
             height = len(categories) * 26
             self.dropdown_window.geometry(f"{int(width)}x{int(height)}+{int(x)}+{int(y)}")
+
+    def generate_canvas(self, parent_frame, bg_color="#2e2e2e", scrollbar_style="#815ac0.Vertical.TScrollbar"):
+        """Generate a canvas with a vertical scrollbar and scrollwheel functionality."""
+        # Create a container frame for the canvas and scrollbar
+
+        container = tk.Frame(parent_frame, bg="#815ac0", highlightthickness=1, highlightbackground="#815ac0")
+        container.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+        # Create the canvas
+        canvas = tk.Canvas(container, bg="#2e2e2e", highlightthickness=0)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Create a frame inside the canvas
+        canvas_frame = tk.Frame(canvas, bg=bg_color, padx=5, pady=5)
+        canvas_window = canvas.create_window((0, 0), window=canvas_frame, anchor="nw")
+
+        # Update scrollregion when contents change
+        def _on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def _on_canvas_configure(event):
+            canvas.itemconfig(canvas_window, width=event.width)
+
+        canvas_frame.bind("<Configure>", _on_frame_configure)
+        canvas.bind("<Configure>", _on_canvas_configure)
+
+        canvas_window = canvas.create_window((0, 0), window=canvas_frame, anchor="nw")
+
+        # Create a vertical scrollbar
+        style = ttk.Style()
+        style.theme_use("default")
+        style.configure(scrollbar_style,
+                        gripcount=0,
+                        background="#815ac0",
+                        troughcolor=bg_color,
+                        bordercolor="#4caf50",
+                        arrowcolor="#ffffff")
+        style.map(scrollbar_style, background=[("disabled", "#815ac0")])
+
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview, style=scrollbar_style)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Configure the canvas to use the scrollbar
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Add scrollwheel functionality
+        canvas.bind("<Enter>", lambda e: self.root.bind_all("<MouseWheel>", lambda event: canvas.yview_scroll(-1 * (event.delta // 120), "units")))
+        canvas.bind("<Leave>", lambda e: self.root.unbind_all("<MouseWheel>"))
+
+        return canvas, canvas_frame
+

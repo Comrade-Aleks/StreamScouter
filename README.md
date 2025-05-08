@@ -39,15 +39,18 @@ Also, the api has a maximum returns per request, so to make sure this is not exc
 
 
 Future updates may include:
-- new tab where you can pin categories and/or people and set individuale sound effects for the notification for each of them.
+- functionality for pin tab, where pinned streamers or categories can get their own notification and such
 - more settings, maybe the ability to change the amount of refreshes
-- no category following 
+- add so that if no category, we just see top streamers on twitch 
 - display game and how long they are live and maybe more information?
-- an option for logging streamers
 - better UI? 
 - fix auto reopen after updating not working
+- update logging so that at quit a log.txt gets generated in case you wish to check after quiting
 
-added within v2.7.3
-- auto updates settings on quit
-- application remembers screen and location if restarted
-- categories will now be suggested when writing a category
+
+added within v2.7.4
+- added two new tabs, one called pinned, and one called log. (note, pinned tab does not do anything as of yet)
+- added log functionality, so that all streamers seen are loged within the log tab until a restart.
+- refactored some code as to not having to repeat alot of code
+- fixed category drop down menu not disapearing on clicks and not reappering again after disapearing.
+- added using scrollwheel on canvas to scroll down
